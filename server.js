@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const attendanceDb = new SQLite(
     path.join(__dirname, "database", "attendance.db"),
-    { fileMustExist: true }
+    { fileMustExist: false }
 );
 
 attendanceDb.pragma("foreign_keys = ON");
