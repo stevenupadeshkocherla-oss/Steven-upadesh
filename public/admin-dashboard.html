@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | Smart QR Attendance</title>
+
+    <!-- QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            background: #f5f7fa;
+            color: #172033;
+        }
+
+        /* NAVBAR */
+
+        .navbar {
+            height: 72px;
+            background: #101827;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            color: white;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand img {
+            width: 45px;
+            height: 45px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .brand h2 {
+            font-size: 18px;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-badge {
+            background: #f6c945;
+            color: #111827;
+            padding: 9px 17px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* MAIN */
+
+        .container {
+            max-width: 1250px;
+            margin: auto;
+            padding: 35px 25px;
+        }
+
+        .welcome {
+            margin-bottom: 28px;
+        }
+
+        .welcome h1 {
+            font-size: 30px;
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            color: #6b7280;
+        }
+
+        /* STAT CARDS */
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 15px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 5px 18px rgba(0,0,0,0.05);
+        }
+
+        .stat-card span {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .stat-card h2 {
+            margin-top: 10px;
+            font-size: 30px;
+        }
+
+        /* MAIN GRID */
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-header h2 {
+            font-size: 20px;
+        }
+
+        .secure {
+            background: #e8f7ef;
+            color: #16834d;
+            padding: 7px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* QR SCANNER */
+
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: auto;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .scanner-controls {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .scanner-step {
+            color: #344054;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .scanner-button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 9px;
+            background: #101827;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .scanner-button:hover:not(:disabled) {
+            background: #1d2939;
+        }
+
+        .scanner-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .scanner-info {
+            text-align: center;
+            margin-top: 18px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .scan-result {
+            margin-top: 18px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .scan-success {
+            display: block;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .scan-error {
+            display: block;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* ACTIVITY */
+
+        .activity {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+
+        .activity-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #fff4c2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .activity-item small {
+            color: #6b7280;
+        }
+
+        /* LOGOUT */
+
+        .logout {
+            margin-top: 25px;
+            background: #101827;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 9px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .logout:hover {
+            background: #1d2939;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 900px) {
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+        @media (max-width: 550px) {
+
+            .navbar {
+                padding: 0 15px;
+            }
+
+            .brand h2 {
+                font-size: 14px;
+            }
+
+            .container {
+                padding: 25px 15px;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+<div class="dashboard-preview">
+    <img src="images/dashboard-preview.png" alt="Smart QR Attendance Dashboard">
+</div>
+    <!-- NAVBAR -->
+
+    <nav class="navbar">
+
+        <div class="brand">
+
+           <img src="images/ATC LOGO.jpeg" alt="ATC Logo">
+            <h2>
+                ALIET TECHPRENEUR CLUB
+            </h2>
+
+        </div>
+
+        <div class="admin-badge">
+            🔐 ADMIN
+        </div>
+
+    </nav>
+
+
+    <!-- MAIN DASHBOARD -->
+
+    <main class="container">
+
+        <div class="welcome">
+
+            <h1>
+                Smart QR Attendance Dashboard
+            </h1>
+
+            <p>
+                Secure event check-in and real-time attendance management
+            </p>
+
+        </div>
+
+
+        <!-- STATISTICS -->
+
+        <section class="stats">
+
+            <div class="stat-card">
+
+                <span>
+                    Total Attendees
+                </span>
+
+                <h2 id="totalAttendees">
+                    0
+                </h2>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span>
+                    Present
+                </span>
+
+                <h2 id="presentCount">
+                    0
+                </h2>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span>
+                    Absent
+                </span>
+
+                <h2 id="absentCount">
+                    0
+                </h2>
+
+            </div>
+
+        </section>
+
+
+        <!-- DASHBOARD CONTENT -->
+
+        <section class="main-grid">
+
+
+            <!-- QR SCANNER -->
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    <h2>
+                        📷 QR Scanner
+                    </h2>
+
+                    <span class="secure">
+                        SECURE
+                    </span>
+
+                </div>
+
+
+                <div class="scanner-controls">
+                    <p class="scanner-step">
+                        Step 1: Start Scanner
+                    </p>
+
+                    <button id="startScanner" class="scanner-button" type="button">
+                        Start Scanner
+                    </button>
+
+                    <p class="scanner-step">
+                        Step 2: Scan Generated QR
+                    </p>
+
+                    <p class="scanner-step">
+                        Step 3: Verify QR
+                    </p>
+                </div>
+
+                <div id="reader"></div>
+
+
+                <p class="scanner-info">
+                    Start the scanner, allow camera access, then scan the generated attendee QR code.
+                </p>
+
+
+                <div id="scanResult" class="scan-result"></div>
+
+            </div>
+
+
+            <!-- RECENT ACTIVITY -->
+
+            <div class="card">
+
+                <div class="card-header">
+
+                    <h2>
+                        Recent Activity
+                    </h2>
+
+                </div>
+
+
+                <div class="activity">
+
+
+                    <div class="activity-item">
+
+                        <div class="activity-left">
+
+                            <div class="activity-icon">
+                                ✓
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    System Ready
+                                </strong>
+
+                                <br>
+
+                                <small>
+                                    QR scanner initialized
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                        <small>
+                            Now
+                        </small>
+
+                    </div>
+
+
+                    <div class="activity-item">
+
+                        <div class="activity-left">
+
+                            <div class="activity-icon">
+                                🔐
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Admin Authenticated
+                                </strong>
+
+                                <br>
+
+                                <small>
+                                    Secure dashboard access
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                        <small>
+                            Now
+                        </small>
+
+                    </div>
+
+
+                    <div class="activity-item">
+
+                        <div class="activity-left">
+
+                            <div class="activity-icon">
+                                📊
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Attendance System
+                                </strong>
+
+                                <br>
+
+                                <small>
+                                    Ready for check-in
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                        <small>
+                            Ready
+                        </small>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <button class="logout" onclick="logout()">
+            Logout
+        </button>
+
+    </main>
+
+
+    <script>
+
+        /*
+         * QR SCANNER
+         */
+
+        const scanner = new Html5Qrcode("reader");
+        const startScannerButton = document.getElementById("startScanner");
+        const scanResult = document.getElementById("scanResult");
+        let scannerRunning = false;
+        let scanInProgress = false;
+
+        function showScanResult(className, message, details) {
+            scanResult.className = `scan-result ${className}`;
+            scanResult.replaceChildren();
+
+            const heading = document.createElement("strong");
+            heading.textContent = message;
+            scanResult.appendChild(heading);
+
+            if (details) {
+                const detail = document.createElement("small");
+                detail.textContent = details;
+                scanResult.appendChild(document.createElement("br"));
+                scanResult.appendChild(detail);
+            }
+        }
+
+        async function stopScanner() {
+            if (!scannerRunning) {
+                return;
+            }
+
+            await scanner.stop();
+            scannerRunning = false;
+        }
+
+        async function onScanSuccess(decodedText) {
+            if (scanInProgress) {
+                return;
+            }
+
+            scanInProgress = true;
+            startScannerButton.disabled = true;
+            showScanResult("", "QR detected. Stopping scanner and verifying...");
+
+            try {
+                await stopScanner();
+            } catch (error) {
+                scanInProgress = false;
+                startScannerButton.disabled = false;
+                showScanResult("scan-error", "REJECTED", "Could not stop the scanner. Please try again.");
+                console.error("QR scanner stop failed:", error);
+                return;
+            }
+
+            try {
+                const payload = JSON.parse(decodedText);
+
+                if (
+                    !payload ||
+                    typeof payload.token !== "string" ||
+                    !payload.token.trim() ||
+                    !Number.isFinite(Number(payload.expiresAt))
+                ) {
+                    throw new Error("QR payload must contain a token and expiresAt.");
+                }
+
+                const response = await fetch("/api/qr/verify", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        token: payload.token,
+                        expiresAt: payload.expiresAt
+                    })
+                });
+                let data;
+
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    showScanResult(
+                        "scan-error",
+                        "REJECTED",
+                        "Verification service returned an invalid response."
+                    );
+                    return;
+                }
+
+                if (response.ok && data && data.success === true && data.status === "PRESENT") {
+                    showScanResult("scan-success", "PRESENT — Attendance Verified");
+                    return;
+                }
+
+                showScanResult(
+                    "scan-error",
+                    "REJECTED",
+                    (data && data.reason) || "QR verification was rejected."
+                );
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    showScanResult("scan-error", "REJECTED", "Invalid QR payload.");
+                } else if (error instanceof TypeError) {
+                    showScanResult("scan-error", "REJECTED", "Unable to reach the verification service.");
+                } else {
+                    showScanResult("scan-error", "REJECTED", error.message);
+                }
+            } finally {
+                scanInProgress = false;
+                startScannerButton.disabled = false;
+            }
+        }
+
+        startScannerButton.addEventListener("click", async function () {
+            startScannerButton.disabled = true;
+            showScanResult("", "Starting scanner...");
+
+            try {
+                await scanner.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: {
+                            width: 250,
+                            height: 250
+                        }
+                    },
+                    onScanSuccess,
+                    function () {
+                        // Scanner continues searching.
+                    }
+                );
+                scannerRunning = true;
+                scanResult.className = "scan-result";
+                scanResult.replaceChildren();
+            } catch (error) {
+                startScannerButton.disabled = false;
+                showScanResult("scan-error", "Scanner could not start", error.message);
+                console.error("QR scanner start failed:", error);
+            }
+        });
+
+
+        /*
+         * TEMPORARY DASHBOARD VALUES
+         *
+         * These will later come from PostgreSQL.
+         */
+
+        document.getElementById(
+            "totalAttendees"
+        ).innerText = "0";
+
+
+        document.getElementById(
+            "presentCount"
+        ).innerText = "0";
+
+
+        document.getElementById(
+            "absentCount"
+        ).innerText = "0";
+
+
+        /*
+         * LOGOUT
+         */
+
+        function logout() {
+
+            window.location.href =
+                "/admin.html";
+
+        }
+
+    </script>
+
+</body>
+</html>

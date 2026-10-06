@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Login | Smart QR Attendance</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background:
+                linear-gradient(rgba(3, 8, 18, 0.92), rgba(3, 8, 18, 0.96)),
+                url("images/campus.jpg") center/cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 430px;
+            padding: 25px;
+        }
+
+        .login-card {
+            background: rgba(10, 17, 30, 0.94);
+            border: 1px solid rgba(255, 210, 70, 0.35);
+            border-radius: 24px;
+            padding: 42px 38px;
+            box-shadow:
+                0 25px 70px rgba(0, 0, 0, 0.55),
+                0 0 35px rgba(255, 210, 70, 0.08);
+        }
+
+        .logo {
+            width: 78px;
+            height: 78px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 22px;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 6px;
+        }
+
+        .club-name {
+            text-align: center;
+            color: #ffd21f;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #aeb8c7;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #e8edf5;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px 16px;
+            border: 1px solid #344054;
+            border-radius: 12px;
+            background: #111b2b;
+            color: #ffffff;
+            font-size: 15px;
+            outline: none;
+            transition: 0.25s;
+        }
+
+        input:focus {
+            border-color: #ffd21f;
+            box-shadow: 0 0 0 3px rgba(255, 210, 31, 0.10);
+        }
+
+        .login-button {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            background: #ffd21f;
+            color: #101010;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.25s;
+            margin-top: 5px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 210, 31, 0.22);
+        }
+
+        .status {
+            min-height: 22px;
+            margin-top: 18px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 24px;
+            color: #aeb8c7;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .back:hover {
+            color: #ffd21f;
+        }
+
+        .security {
+            text-align: center;
+            margin-top: 22px;
+            color: #687386;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 35px 25px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="login-card">
+
+            <img
+                src="images/ATC LOGO.jpeg"
+                alt="ALIET Techpreneur Club"
+                class="logo"
+            >
+
+            <div class="club-name">
+                ALIET TECHPRENEUR CLUB
+            </div>
+
+            <h1>Admin Login</h1>
+
+            <p class="subtitle">
+                Secure access to the Smart QR Attendance Pipeline
+            </p>
+
+            <form id="loginForm">
+
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input
+                        type="text"
+                        id="username"
+                        placeholder="Enter admin username"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Enter admin password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="login-button">
+                    🔐 Secure Login →
+                </button>
+
+            </form>
+
+            <div id="status" class="status"></div>
+
+            <a href="/" class="back">
+                ← Back to Smart QR Attendance
+            </a>
+
+            <div class="security">
+                🔒 Authorized administrators only
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const loginForm = document.getElementById("loginForm");
+        const status = document.getElementById("status");
+
+        loginForm.addEventListener("submit", async function (event) {
+
+            event.preventDefault();
+
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value;
+
+            status.textContent = "Authenticating...";
+            status.style.color = "#ffd21f";
+
+            try {
+
+                const response = await fetch("/api/admin/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+
+                    status.textContent = "Login successful...";
+                    status.style.color = "#4ade80";
+
+                    setTimeout(() => {
+                        window.location.href = "/admin-dashboard.html";
+                    }, 700);
+
+                } else {
+
+                    status.textContent =
+                        data.error || "Invalid username or password.";
+
+                    status.style.color = "#ff6b6b";
+                }
+
+            } catch (error) {
+
+                status.textContent =
+                    "Server connection failed.";
+
+                status.style.color = "#ff6b6b";
+            }
+        });
+    </script>
+
+</body>
+</html>

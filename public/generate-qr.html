@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generate Live QR | Smart QR Attendance</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f7fb;
+        color: #172033;
+    }
+
+    .navbar {
+        background: #071b33;
+        color: white;
+        padding: 16px 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: bold;
+        font-size: 20px;
+    }
+
+    .brand img {
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+
+    .container {
+        max-width: 700px;
+        margin: 45px auto;
+        padding: 20px;
+    }
+
+    .card {
+        background: white;
+        border-radius: 20px;
+        padding: 35px;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        color: #667085;
+        margin-bottom: 25px;
+    }
+
+    .timer {
+        background: #fff7d6;
+        color: #8a6500;
+        padding: 12px;
+        border-radius: 10px;
+        font-weight: bold;
+        margin-bottom: 25px;
+    }
+
+    #qrImage {
+        width: 300px;
+        height: 300px;
+        object-fit: contain;
+        border: 10px solid white;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        margin: 10px auto 25px;
+        display: block;
+    }
+
+    .status {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .qr-form {
+        display: grid;
+        gap: 14px;
+        margin: 24px 0;
+        text-align: left;
+    }
+
+    .qr-form label {
+        display: grid;
+        gap: 7px;
+        color: #344054;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .qr-form input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        font: inherit;
+    }
+
+    .qr-form button {
+        margin-top: 4px;
+    }
+
+    button {
+        background: #ffc400;
+        border: none;
+        padding: 14px 25px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #eab300;
+    }
+
+    .back {
+        display: inline-block;
+        margin-top: 25px;
+        color: #174ea6;
+        text-decoration: none;
+    }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="brand">
+        <img src="images/ATC LOGO.jpeg" alt="ATC Logo">
+        <span>ALIET TECHPRENEUR CLUB</span>
+    </div>
+
+    <span>LIVE QR</span>
+</nav>
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>Generate Live QR</h1>
+
+        <p class="subtitle">
+            Scan this QR code to mark attendance
+        </p>
+
+        <div class="timer" id="timer">
+            Enter a student and event to begin.
+        </div>
+
+        <img id="qrImage" alt="Live QR Code">
+
+        <div class="status" id="status">
+            Enter a student and event to generate a QR.
+        </div>
+
+        <form class="qr-form" id="qrForm">
+            <label for="studentId">
+                Student ID
+                <input
+                    id="studentId"
+                    name="studentId"
+                    type="text"
+                    autocomplete="off"
+                    required
+                >
+            </label>
+
+            <label for="eventId">
+                Event ID
+                <input
+                    id="eventId"
+                    name="eventId"
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                >
+            </label>
+
+            <button type="submit">
+                Generate QR
+            </button>
+        </form>
+
+        <br>
+
+        <a class="back" href="/admin-dashboard.html">
+            ← Back to Dashboard
+        </a>
+
+    </div>
+
+</div>
+
+<script>
+
+let timerInterval;
+let currentStudentId = "";
+let currentEventId = null;
+
+document.getElementById("qrForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    currentStudentId =
+        document.getElementById("studentId").value.trim();
+    currentEventId =
+        Number(document.getElementById("eventId").value);
+
+    generateQR(currentStudentId, currentEventId);
+});
+
+async function generateQR(studentId, eventId) {
+
+    try {
+
+        clearInterval(timerInterval);
+
+        document.getElementById("status").innerText =
+            "Generating secure QR...";
+
+        const response = await fetch("/api/qr/generate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                studentId,
+                eventId
+            })
+        });
+
+        const data =
+            await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "QR generation failed");
+        }
+
+        document.getElementById("qrImage").src =
+            data.qrCode;
+
+        document.getElementById("status").innerText =
+            "QR Active • Scan Now";
+
+        startTimer(data.expiresAt);
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("status").innerText =
+            error.message;
+
+    }
+}
+
+
+function startTimer(expiresAt) {
+
+    timerInterval = setInterval(() => {
+
+        const remaining =
+            Math.max(
+                0,
+                Math.ceil(
+                    (expiresAt - Date.now()) / 1000
+                )
+            );
+
+        document.getElementById("timer").innerText =
+            "QR expires in " + remaining + " seconds";
+
+        if (remaining <= 0) {
+
+            clearInterval(timerInterval);
+
+            document.getElementById("timer").innerText =
+                "QR expired — generating new QR...";
+
+            document.getElementById("status").innerText =
+                "Refreshing secure QR...";
+
+            generateQR(currentStudentId, currentEventId);
+        }
+
+    }, 1000);
+}
+
+</script>
+
+</body>
+</html>

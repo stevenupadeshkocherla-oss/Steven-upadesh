@@ -1,0 +1,26 @@
+{
+  "name": "steven-upadesh",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "googleapis": "^182.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.0.13",
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
+    "uuid": "^14.0.2"
+  }
+}

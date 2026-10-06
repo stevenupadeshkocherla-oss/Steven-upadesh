@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Attendance QR Pipeline</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow-x: hidden;
+        }
+
+        .home {
+            position: relative;
+            width: 100%;
+            line-height: 0;
+        }
+
+        .home-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Admin Login clickable area */
+        .admin-login {
+            position: absolute;
+            left: 5.5%;
+            top: 59%;
+            width: 19%;
+            height: 8%;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* ATC Vision clickable area */
+        .atc-vision {
+            position: absolute;
+            left: 37%;
+            top: 3%;
+            width: 13%;
+            height: 8%;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Home clickable area */
+        .home-button {
+            position: absolute;
+            left: 25%;
+            top: 3%;
+            width: 10%;
+            height: 8%;
+            cursor: pointer;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="home">
+
+        <img
+            src="images/homepage.jpg"
+            class="home-image"
+            alt="Smart Attendance QR Pipeline"
+        >
+
+        <!-- Home -->
+        <a
+            href="/"
+            class="home-button"
+            aria-label="Home">
+        </a>
+
+        <!-- ATC Vision -->
+        <a
+            href="/atc-vision.html"
+            class="atc-vision"
+            aria-label="ATC Vision">
+        </a>
+
+        <!-- Admin Login -->
+        <a
+            href="/admin.html"
+            class="admin-login"
+            aria-label="Admin Login">
+        </a>
+
+    </div>
+
+</body>
+</html>

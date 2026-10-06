@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart QR Attendance - Admin</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0b1220;
+    }
+
+    .login-box {
+      width: 380px;
+      padding: 40px;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .logo h1 {
+      color: #111827;
+      font-size: 24px;
+    }
+
+    .logo p {
+      color: #777;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin: 18px 0 7px;
+      font-weight: 600;
+      color: #222;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #f5b82e;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 25px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: #f5b82e;
+      color: #111;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #e5a817;
+    }
+
+    #message {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-box">
+
+    <div class="logo">
+      <h1>Smart QR Attendance</h1>
+      <p>Admin Secure Login</p>
+    </div>
+
+    <form id="loginForm">
+
+      <label for="username">Username</label>
+      <input
+        type="text"
+        id="username"
+        placeholder="Enter admin username"
+        required
+      >
+
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter admin password"
+        required
+      >
+
+      <button type="submit">
+        Admin Login →
+      </button>
+
+    </form>
+
+    <div id="message"></div>
+
+  </div>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      document.getElementById("message").textContent =
+        "Checking admin credentials...";
+    });
+  </script>
+
+</body>
+</html>
