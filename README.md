@@ -181,19 +181,22 @@ without an email address is imported but does not receive an email.
    https://attendance.example.com/generate-qr.html?studentId=STU-001&eventId=EVT-2026-01
    ```
 
-4. The server sends an email containing the link. It does not attach a QR PDF.
+4. The server queues email delivery and sends messages in parallel (up to five
+   at a time). It does not attach a QR PDF. The roster page returns after the
+   sheet sync rather than waiting for all email providers to respond.
 5. Successfully emailed student/event/recipient combinations are recorded in
    SQLite to prevent repeated emails on later syncs.
-6. The page reports sent, already-sent, currently-sending, missing-email, and
-   failed counts.
+6. The page reports that emails are being sent in the background. Completed
+   counts and delivery errors are written to the server log.
 
 Failed sends are logged and are not recorded as successful, so a later roster
 sync can retry them. A change to the recipient email is treated as a new
 recipient and can result in a new email.
 
 Roster sync is triggered when the admin opens the QR generation page and also
-when a QR is first generated from an emailed link. The timed QR refreshes do not
-re-sync the entire sheet each minute.
+when a QR is first generated from an emailed link. Only the admin roster page
+queues email; an attendee opening a QR link does not start another round of
+emails. Timed QR refreshes do not re-sync the entire sheet each minute.
 
 ### 3. Attendee opens the dynamic QR link
 

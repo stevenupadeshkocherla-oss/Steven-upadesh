@@ -320,14 +320,9 @@ async function loadRoster() {
         ));
 
         const emailSync = data.emailSync || {};
-        status.innerText = [
-            "Roster loaded from Google Sheets.",
-            `Dynamic QR links emailed: ${emailSync.sent || 0}.`,
-            `Already sent: ${emailSync.alreadySent || 0}.`,
-            `Currently sending: ${emailSync.pending || 0}.`,
-            `Missing email: ${emailSync.missingEmail || 0}.`,
-            `Email failures: ${emailSync.failed || 0}.`
-        ].join(" ");
+        status.innerText = emailSync.queued
+            ? "Roster loaded. Dynamic QR link emails are being sent in the background."
+            : "Roster loaded from Google Sheets.";
     } catch (error) {
         console.error("Roster loading failed:", error);
         status.innerText = error.message;

@@ -78,6 +78,9 @@ attendanceDb.pragma("foreign_keys = ON");
 // Gmail transporter
 const transporter = nodemailer.createTransport({
     service: "gmail",
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_APP_PASSWORD
@@ -336,74 +339,96 @@ async function emailDynamicQrLinks(rows, headerIndexes, origin) {
         }
     }
 
-    for (const record of records.values()) {
-        if (!record.email) {
-            emailSync.missingEmail += 1;
-            continue;
-        }
+    const queue = [...records.values()];
+    let nextRecord = 0;
 
-        const alreadySent = attendanceDb.prepare(`
-            SELECT 1
-            FROM qr_link_emails
-            WHERE student_id = ? AND event_id = ? AND email = ?
-        `).get(record.studentId, record.eventId, record.email);
-        if (alreadySent) {
-            emailSync.alreadySent += 1;
-            continue;
-        }
+    async function sendNextRecord() {
+        while (nextRecord < queue.length) {
+            const record = queue[nextRecord];
+            nextRecord += 1;
 
-        const emailKey = `${record.studentId}\u0000${record.eventId}\u0000${record.email}`;
-        if (qrLinkEmailsInProgress.has(emailKey)) {
-            emailSync.pending += 1;
-            continue;
-        }
-
-        qrLinkEmailsInProgress.add(emailKey);
-        try {
-            if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-                throw new Error("Email delivery configuration is missing.");
+            if (!record.email) {
+                emailSync.missingEmail += 1;
+                continue;
             }
 
-            const qrPageUrl = new URL("/generate-qr.html", origin);
-            qrPageUrl.searchParams.set("studentId", record.studentId);
-            qrPageUrl.searchParams.set("eventId", record.eventId);
-            const studentName = record.studentName || "Student";
-            const eventName = record.eventName;
-            const escapedStudentName = escapeHtml(studentName);
-            const escapedEventName = escapeHtml(eventName);
-            const escapedQrPageUrl = escapeHtml(qrPageUrl.toString());
+            const alreadySent = attendanceDb.prepare(`
+                SELECT 1
+                FROM qr_link_emails
+                WHERE student_id = ? AND event_id = ? AND email = ?
+            `).get(record.studentId, record.eventId, record.email);
+            if (alreadySent) {
+                emailSync.alreadySent += 1;
+                continue;
+            }
 
-            await transporter.sendMail({
-                from: process.env.EMAIL_USER,
-                to: record.email,
-                subject: `Your attendance QR link for ${eventName}`,
-                text: `Hello ${studentName},\n\nUse this link to view your dynamic attendance QR code for ${eventName}:\n${qrPageUrl}\n\nThe QR code refreshes automatically and is valid only briefly after each refresh.`,
-                html: `<p>Hello ${escapedStudentName},</p><p>Use the link below to view your dynamic attendance QR code for <strong>${escapedEventName}</strong>:</p><p><a href="${escapedQrPageUrl}">Open your attendance QR code</a></p><p>The QR code refreshes automatically and is valid only briefly after each refresh.</p>`
-            });
+            const emailKey = `${record.studentId}\u0000${record.eventId}\u0000${record.email}`;
+            if (qrLinkEmailsInProgress.has(emailKey)) {
+                emailSync.pending += 1;
+                continue;
+            }
 
-            attendanceDb.prepare(`
-                INSERT INTO qr_link_emails (student_id, event_id, email)
-                VALUES (?, ?, ?)
-                ON CONFLICT(student_id, event_id, email) DO NOTHING
-            `).run(record.studentId, record.eventId, record.email);
-            emailSync.sent += 1;
-        } catch (error) {
-            emailSync.failed += 1;
-            console.error(
-                `Dynamic QR link email failed for student ${record.studentId}, event ${record.eventId}:`,
-                error.message
-            );
-        } finally {
-            qrLinkEmailsInProgress.delete(emailKey);
+            qrLinkEmailsInProgress.add(emailKey);
+            try {
+                if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+                    throw new Error("Email delivery configuration is missing.");
+                }
+
+                const qrPageUrl = new URL("/generate-qr.html", origin);
+                qrPageUrl.searchParams.set("studentId", record.studentId);
+                qrPageUrl.searchParams.set("eventId", record.eventId);
+                const studentName = record.studentName || "Student";
+                const eventName = record.eventName;
+                const escapedStudentName = escapeHtml(studentName);
+                const escapedEventName = escapeHtml(eventName);
+                const escapedQrPageUrl = escapeHtml(qrPageUrl.toString());
+
+                await transporter.sendMail({
+                    from: process.env.EMAIL_USER,
+                    to: record.email,
+                    subject: `Your attendance QR link for ${eventName}`,
+                    text: `Hello ${studentName},\n\nUse this link to view your dynamic attendance QR code for ${eventName}:\n${qrPageUrl}\n\nThe QR code refreshes automatically and is valid only briefly after each refresh.`,
+                    html: `<p>Hello ${escapedStudentName},</p><p>Use the link below to view your dynamic attendance QR code for <strong>${escapedEventName}</strong>:</p><p><a href="${escapedQrPageUrl}">Open your attendance QR code</a></p><p>The QR code refreshes automatically and is valid only briefly after each refresh.</p>`
+                });
+
+                attendanceDb.prepare(`
+                    INSERT INTO qr_link_emails (student_id, event_id, email)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(student_id, event_id, email) DO NOTHING
+                `).run(record.studentId, record.eventId, record.email);
+                emailSync.sent += 1;
+            } catch (error) {
+                emailSync.failed += 1;
+                console.error(
+                    `Dynamic QR link email failed for student ${record.studentId}, event ${record.eventId}:`,
+                    error.message
+                );
+            } finally {
+                qrLinkEmailsInProgress.delete(emailKey);
+            }
         }
     }
+
+    await Promise.all(
+        Array.from(
+            { length: Math.min(5, queue.length) },
+            () => sendNextRecord()
+        )
+    );
 
     return emailSync;
 }
 
-async function syncRosterAndEmailDynamicQrLinks(origin) {
-    const { rows, headerIndexes } = await syncRosterFromSheet();
-    return emailDynamicQrLinks(rows, headerIndexes, origin);
+function queueDynamicQrLinkEmails(rows, headerIndexes, origin) {
+    setImmediate(() => {
+        emailDynamicQrLinks(rows, headerIndexes, origin)
+            .then((emailSync) => {
+                console.log("Dynamic QR link email sync completed:", emailSync);
+            })
+            .catch((error) => {
+                console.error("Dynamic QR link email queue failed:", error.message);
+            });
+    });
 }
 
 async function writeAttendanceToSheet(qr, checkedInAt) {
@@ -527,13 +552,16 @@ app.post("/api/admin/login", (req, res) => {
 // Import the latest student and event roster from Google Sheets
 app.get("/api/roster", async (req, res) => {
     try {
+        const { rows, headerIndexes } = await syncRosterFromSheet();
         const origin = process.env.PUBLIC_BASE_URL ||
             `${req.protocol}://${req.get("host")}`;
-        const emailSync = await syncRosterAndEmailDynamicQrLinks(origin);
+        queueDynamicQrLinkEmails(rows, headerIndexes, origin);
 
         return res.json({
             success: true,
-            emailSync,
+            emailSync: {
+                queued: true
+            },
             students: attendanceDb.prepare(`
                 SELECT student_id AS studentId, name
                 FROM students
@@ -560,9 +588,7 @@ app.post("/api/qr/generate", async (req, res) => {
     try {
         if (req.body?.syncRoster !== false) {
             try {
-                const origin = process.env.PUBLIC_BASE_URL ||
-                    `${req.protocol}://${req.get("host")}`;
-                await syncRosterAndEmailDynamicQrLinks(origin);
+                await syncRosterFromSheet();
             } catch (error) {
                 console.error("Google Sheets roster sync error:", error.message);
                 return res.status(503).json({
