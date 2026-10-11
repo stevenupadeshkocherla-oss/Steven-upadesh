@@ -122,18 +122,83 @@ async function getSheetsClient() {
         return sheetsClient;
     }
 
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
     const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_FILE;
-    if (!keyFile || !spreadsheetId) {
-        throw new Error("Google Sheets configuration is missing.");
+    if (!spreadsheetId) {
+        throw new Error("Google Sheets spreadsheet ID is not configured.");
     }
 
-    const auth = new google.auth.GoogleAuth({
-        keyFile,
+    const authOptions = {
         scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-    });
+    };
+
+    if (serviceAccountJson) {
+        let credentials;
+        try {
+            credentials = JSON.parse(serviceAccountJson);
+        } catch (error) {
+            throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON must contain valid JSON.");
+        }
+
+        if (
+            typeof credentials.client_email !== "string" ||
+            typeof credentials.private_key !== "string"
+        ) {
+            throw new Error(
+                "GOOGLE_SERVICE_ACCOUNT_JSON must include client_email and private_key."
+            );
+        }
+
+        authOptions.credentials = credentials;
+    } else if (keyFile) {
+        if (!fs.existsSync(keyFile)) {
+            throw new Error(
+                "The GOOGLE_SERVICE_ACCOUNT_FILE path does not exist on this server. Configure GOOGLE_SERVICE_ACCOUNT_JSON for cloud deployments."
+            );
+        }
+
+        authOptions.keyFile = keyFile;
+    } else {
+        throw new Error(
+            "Configure GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_FILE."
+        );
+    }
+
+    const auth = new google.auth.GoogleAuth(authOptions);
 
     sheetsClient = google.sheets({ version: "v4", auth });
     return sheetsClient;
+}
+
+function getRosterSyncErrorMessage(error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = Number(error?.code || error?.response?.status || error?.status);
+
+    if (
+        message.includes("GOOGLE_SERVICE_ACCOUNT_JSON") ||
+        message.includes("GOOGLE_SERVICE_ACCOUNT_FILE") ||
+        message.includes("spreadsheet ID")
+    ) {
+        return message;
+    }
+
+    if (status === 403) {
+        return "Google Sheets denied access. Share the spreadsheet with the configured service-account email and grant Editor access.";
+    }
+
+    if (status === 404) {
+        return "The configured Google spreadsheet or sheet tab was not found. Check GOOGLE_SPREADSHEET_ID and GOOGLE_SHEET_NAME.";
+    }
+
+    if (message.includes("missing the")) {
+        return message;
+    }
+
+    if (message.includes("empty")) {
+        return message;
+    }
+
+    return "Could not read the roster from Google Sheets. Check the server log for the detailed Google API error.";
 }
 
 async function readSheetRows() {
@@ -485,7 +550,7 @@ app.get("/api/roster", async (req, res) => {
         console.error("Google Sheets roster sync error:", error.message);
         return res.status(503).json({
             success: false,
-            error: "Could not load the roster from Google Sheets. Check the sheet configuration and service-account access."
+            error: getRosterSyncErrorMessage(error)
         });
     }
 });
@@ -502,7 +567,7 @@ app.post("/api/qr/generate", async (req, res) => {
                 console.error("Google Sheets roster sync error:", error.message);
                 return res.status(503).json({
                     success: false,
-                    error: "Could not load the roster from Google Sheets. Check the sheet configuration and service-account access."
+                    error: getRosterSyncErrorMessage(error)
                 });
             }
         }

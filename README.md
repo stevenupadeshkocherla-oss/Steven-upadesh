@@ -92,6 +92,10 @@ Configuration details:
   `/edit`.
 - `GOOGLE_SERVICE_ACCOUNT_FILE` must point to the service-account JSON key
   file. Store that file outside the repository and never commit or expose it.
+- For cloud hosts where a local key-file path is unavailable, set
+  `GOOGLE_SERVICE_ACCOUNT_JSON` to the complete service-account JSON instead.
+  The server prefers this variable when it is set. Add it as a protected
+  environment secret in the hosting dashboard; do not commit the JSON.
 - `PUBLIC_BASE_URL` should be the externally reachable site origin, without a
   trailing path. Set it in production so links in emails point to the deployed
   website, rather than an internal hostname or local address.
@@ -105,7 +109,10 @@ Configuration details:
 3. Share the spreadsheet with the service account's email address and grant
    **Editor** access. Editor access is needed because check-ins write to the
    sheet.
-4. Set the spreadsheet ID, tab name, and service-account key path in `.env`.
+4. Set the spreadsheet ID and tab name. For local use, configure the
+   service-account key file path in `.env`; for cloud hosting, configure the
+   complete service-account JSON as a protected `GOOGLE_SERVICE_ACCOUNT_JSON`
+   environment variable.
 
 ### 4. Prepare the sheet
 
@@ -250,7 +257,7 @@ selection and QR generation.
 
 | Symptom | Checks |
 | --- | --- |
-| Roster fails to load | Confirm `GOOGLE_SPREADSHEET_ID`, `GOOGLE_SHEET_NAME`, the service-account key path, and spreadsheet sharing permissions. Check that `Attendance ID` and `Event ID` headers exist. |
+| Roster fails to load | Confirm `GOOGLE_SPREADSHEET_ID`, `GOOGLE_SHEET_NAME`, and the Google service-account configuration. Cloud deployments should use `GOOGLE_SERVICE_ACCOUNT_JSON`, not a local machine key-file path. Share the sheet with that service account and check that `Attendance ID` and `Event ID` headers exist. The roster error response and server log provide more detail. |
 | Email does not arrive | Confirm `EMAIL_USER` and `EMAIL_APP_PASSWORD`; check the displayed email failure/missing-email counts and the server log. Verify the sheet row has a valid email address. |
 | Email link opens the wrong host | Set `PUBLIC_BASE_URL` to the public HTTPS origin and restart the server. |
 | QR page says student or event not found | Run a roster sync and verify the link's IDs match the sheet's `Attendance ID` and `Event ID` values. |
