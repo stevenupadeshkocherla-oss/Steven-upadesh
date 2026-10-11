@@ -1,0 +1,245 @@
+const express = require("express");
+const cors = require("cors");
+require("dotenv").config();
+
+const nodemailer = require("nodemailer");
+const QRCode = require("qrcode");
+const crypto = require("crypto")ORT || 5000;
+
+// Create database directory if missing
+const databaseDirectory = path.join(__dirname, "database");
+
+if (!fs.existsSync(databaseDirectory)) {
+    fs.mkdirSync(databaseDirectory, { recursive: true });
+}
+
+// SQLite database
+const attendanceDb = new SQLite(
+    path.join(databaseDirectory, "attendance.db")
+);
+
+// Create required tables
+attendanceDb.exec(`
+    CREATE TABLE IF NOT EXISTS students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT UNIQUE NOT NULL,
+        name TEXT,
+        email TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        event_date TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        event_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'PRESENT',
+        checked_in_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(student_id, event_id)
+    );
+`);
+
+attendanceDb.pragma("foreign_keys = ON");
+
+// Gmail transporter
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_APP_PASSWORD
+    }
+});
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+// Keep track of generated QR
+let currentQR = null;
+const usedTokens = new Set();
+
+// Home page
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Health check
+app.get("/health", (req, res) => {
+    res.json({
+        success: true,
+        status: "OK",
+        project: "Smart QR Attendance"
+    });
+});
+
+// Admin login
+app.post("/api/admin/login", (req, res) => {
+    const { username, password } = req.body || {};
+
+    if (
+        username === process.env.ADMIN_USERNAME &&
+        password === process.env.ADMIN_PASSWORD
+    ) {
+        return res.json({
+            success: true,
+            message: "Admin login successful"
+        });
+    }
+
+    return res.status(401).json({
+        success: false,
+        error: "Invalid username or password"
+    });
+});
+
+// Generate QR
+app.post("/api/qr/generate", async (req, res) => {
+    try {
+        const studentId =
+            typeof req.body?.studentId === "string"
+                ? req.body.studentId.trim()
+                : "";
+
+        const eventId = Number(req.body?.eventId);
+
+        if (
+            !studentId ||
+            !Number.isSafeInteger(eventId) ||
+            eventId <= 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                error: "Enter a valid Student ID and Event ID"
+            });
+        }
+
+        const student = attendanceDb.prepare(`
+            SELECT id, student_id, name, email
+            FROM students
+            WHERE student_id = ?
+        `).get(studentId);
+
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                error: "Student ID was not found"
+            });
+        }
+
+        const event = attendanceDb.prepare(`
+            SELECT id, name
+            FROM events
+            WHERE id = ?
+        `).get(eventId);
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: "Event ID was not found"
+            });
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = Date.now() + 60 * 1000;
+
+        const qrData = JSON.stringify({
+            token,
+            expiresAt
+        });
+
+        const qrCode = await QRCode.toDataURL(qrData);
+
+        currentQR = {
+            token,
+            expiresAt,
+            studentId: student.id,
+            eventId: event.id
+        };
+
+        // Return QR even if email delivery fails
+        let emailSent = false;
+        let emailMessage = "QR generated; email not sent.";
+
+        if (student.email && process.env.EMAIL_USER &&
+            process.env.EMAIL_APP_PASSWORD) {
+            try {
+                await transporter.sendMail({
+                    from: process.env.EMAIL_USER,
+                    to: student.email,
+                    subject: "Smart QR Attendance - Your QR Code",
+                    text:
+                        `Hello ${student.name || "Student"},\n\n` +
+                        "Your Smart QR Attendance QR code has been generated.\n\n" +
+                        "This QR code is valid for 60 seconds only.\n\n" +
+                        "Please use the original QR code for attendance.",
+                    attachments: [
+                        {
+                            filename: "attendance-qr.png",
+                            content: Buffer.from(
+                                qrCode.split(",")[1],
+                                "base64"
+                            ),
+                            contentType: "image/png"
+                        }
+                    ]
+                });
+
+                emailSent = true;
+                emailMessage = "Email sent successfully.";
+            } catch (emailError) {
+                console.error(
+                    "Email sending failed:",
+                    emailError.message
+                );
+                emailMessage = "QR generated, but email delivery failed.";
+            }
+        } else {
+            emailMessage = "QR generated, but student email or email settings are missing.";
+        }
+
+        return res.json({
+            success: true,
+            qrCode,
+            expiresAt,
+            emailSent,
+            emailMessage
+        });
+
+    } catch (error) {
+        console.error("QR generation error:", error);
+
+        return res.status(500).json({
+            success: false,
+            error: "QR generation failed. Check the server terminal."
+        });
+    }
+});
+
+// Verify QR and record attendance
+app.post("/api/qr/verify", (req, res) => {
+    try {
+        const { token, expiresAt } = req.body || {};
+        const expiry = Number(expiresAt);
+
+        if (
+            typeof token !== "string" ||
+            !/^[a-f0-9]{64}$/.test(token) ||
+            !Number.isSafeInteger(expiry)
+        ) {
+            return res.status(400).json({
+                success: f
+
+        if (Date.now() > expiry) {
+            return res.status(401).json({
+                success: false,
+                status: "REJECTED",
+                reason: "QR code expired"
+            });
+        }

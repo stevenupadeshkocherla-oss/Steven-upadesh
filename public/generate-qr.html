@@ -13,6 +13,8 @@
     }
 
     body {
+        min-height: 100vh;
+        min-height: 100dvh;
         font-family: Arial, sans-serif;
         background: #f5f7fb;
         color: #172033;
@@ -21,10 +23,11 @@
     .navbar {
         background: #071b33;
         color: white;
-        padding: 16px 30px;
+        padding: 16px clamp(16px, 4vw, 30px);
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
     }
 
     .brand {
@@ -44,14 +47,15 @@
 
     .container {
         max-width: 700px;
-        margin: 45px auto;
-        padding: 20px;
+        margin: 0 auto;
+        padding: clamp(16px, 5vh, 45px) 20px;
+        padding: clamp(16px, 5dvh, 45px) 20px;
     }
 
     .card {
         background: white;
         border-radius: 20px;
-        padding: 35px;
+        padding: clamp(20px, 5vw, 35px);
         text-align: center;
         box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
@@ -75,13 +79,18 @@
     }
 
     #qrImage {
-        width: 300px;
-        height: 300px;
+        width: min(300px, 80vw);
+        max-width: 100%;
+        aspect-ratio: 1;
         object-fit: contain;
         border: 10px solid white;
         box-shadow: 0 5px 20px rgba(0,0,0,0.12);
         margin: 10px auto 25px;
         display: block;
+    }
+
+    #qrImage[hidden] {
+        display: none;
     }
 
     .status {
@@ -95,6 +104,10 @@
         gap: 14px;
         margin: 24px 0;
         text-align: left;
+    }
+
+    .qr-form[hidden] {
+        display: none;
     }
 
     .qr-form label {
@@ -136,6 +149,36 @@
         margin-top: 25px;
         color: #174ea6;
         text-decoration: none;
+    }
+
+    .back[hidden] {
+        display: none;
+    }
+
+    @media (max-width: 550px) {
+        .brand {
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .brand img {
+            width: 36px;
+            height: 36px;
+        }
+
+        .navbar > span {
+            font-size: 12px;
+        }
+
+        .container {
+            width: 100%;
+            padding-right: 14px;
+            padding-left: 14px;
+        }
+
+        .card {
+            border-radius: 14px;
+        }
     }
 </style>
 </head>
@@ -179,8 +222,11 @@
                     name="studentId"
                     type="text"
                     autocomplete="off"
+                    list="studentOptions"
+                    placeholder="Select or enter a student ID"
                     required
                 >
+                <datalist id="studentOptions"></datalist>
             </label>
 
             <label for="eventId">
@@ -188,11 +234,12 @@
                 <input
                     id="eventId"
                     name="eventId"
-                    type="number"
-                    min="1"
-                    step="1"
+                    type="text"
+                    list="eventOptions"
+                    placeholder="Select or enter an event ID"
                     required
                 >
+                <datalist id="eventOptions"></datalist>
             </label>
 
             <button type="submit">
@@ -215,6 +262,7 @@
 let timerInterval;
 let currentStudentId = "";
 let currentEventId = null;
+let generationId = 0;
 
 document.getElementById("qrForm").addEventListener("submit", function (event) {
     event.preventDefault();
@@ -222,19 +270,82 @@ document.getElementById("qrForm").addEventListener("submit", function (event) {
     currentStudentId =
         document.getElementById("studentId").value.trim();
     currentEventId =
-        Number(document.getElementById("eventId").value);
+        document.getElementById("eventId").value.trim();
 
-    generateQR(currentStudentId, currentEventId);
+    generateQR(currentStudentId, currentEventId, false);
 });
 
-async function generateQR(studentId, eventId) {
+const qrLinkParams = new URLSearchParams(window.location.search);
+const linkedStudentId = qrLinkParams.get("studentId");
+const linkedEventId = qrLinkParams.get("eventId");
+
+if (linkedStudentId && linkedEventId) {
+    currentStudentId = linkedStudentId.trim();
+    currentEventId = linkedEventId.trim();
+    document.getElementById("qrForm").hidden = true;
+    document.querySelector(".back").hidden = true;
+    document.getElementById("status").innerText =
+        "Loading your dynamic attendance QR...";
+    generateQR(currentStudentId, currentEventId, true);
+} else if (qrLinkParams.has("studentId") || qrLinkParams.has("eventId")) {
+    document.getElementById("qrForm").hidden = true;
+    document.querySelector(".back").hidden = true;
+    document.getElementById("status").innerText =
+        "This attendance QR link is incomplete. Contact the event organizer.";
+    document.getElementById("timer").innerText =
+        "Unable to generate an attendance QR.";
+} else {
+    loadRoster();
+}
+
+async function loadRoster() {
+    const status = document.getElementById("status");
 
     try {
+        const response = await fetch("/api/roster");
+        const data = await response.json();
 
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "Could not load the Google Sheets roster.");
+        }
+
+        const studentOptions = document.getElementById("studentOptions");
+        const eventOptions = document.getElementById("eventOptions");
+
+        studentOptions.replaceChildren(...data.students.map((student) =>
+            new Option(`${student.studentId} - ${student.name || "Student"}`, student.studentId)
+        ));
+        eventOptions.replaceChildren(...data.events.map((event) =>
+            new Option(`${event.eventId} - ${event.name}`, event.eventId)
+        ));
+
+        const emailSync = data.emailSync || {};
+        status.innerText = [
+            "Roster loaded from Google Sheets.",
+            `Dynamic QR links emailed: ${emailSync.sent || 0}.`,
+            `Already sent: ${emailSync.alreadySent || 0}.`,
+            `Currently sending: ${emailSync.pending || 0}.`,
+            `Missing email: ${emailSync.missingEmail || 0}.`,
+            `Email failures: ${emailSync.failed || 0}.`
+        ].join(" ");
+    } catch (error) {
+        console.error("Roster loading failed:", error);
+        status.innerText = error.message;
+    }
+}
+
+async function generateQR(studentId, eventId, syncRoster) {
+    const thisGeneration = ++generationId;
+    const qrImage = document.getElementById("qrImage");
+
+    try {
         clearInterval(timerInterval);
-
+        qrImage.hidden = true;
+        qrImage.removeAttribute("src");
         document.getElementById("status").innerText =
             "Generating secure QR...";
+        document.getElementById("timer").innerText =
+            "Please wait while a new QR is generated.";
 
         const response = await fetch("/api/qr/generate", {
             method: "POST",
@@ -243,32 +354,60 @@ async function generateQR(studentId, eventId) {
             },
             body: JSON.stringify({
                 studentId,
-                eventId
+                eventId,
+                syncRoster
             })
         });
 
-        const data =
-            await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (error) {
+            throw new Error("The server returned an invalid response.");
+        }
 
         if (!response.ok || !data.success) {
             throw new Error(data.error || "QR generation failed");
         }
 
-        document.getElementById("qrImage").src =
-            data.qrCode;
+        if (
+            typeof data.qrCode !== "string" ||
+            !data.qrCode.startsWith("data:image/png;base64,") ||
+            !Number.isSafeInteger(data.expiresAt) ||
+            data.expiresAt <= Date.now()
+        ) {
+            throw new Error("The server returned an invalid or expired QR code.");
+        }
+
+        const imageReady = new Promise((resolve, reject) => {
+            const generatedImage = new Image();
+            generatedImage.onload = resolve;
+            generatedImage.onerror = () => reject(
+                new Error("Chrome could not load the generated QR image.")
+            );
+            generatedImage.src = data.qrCode;
+        });
+        await imageReady;
+
+        if (thisGeneration !== generationId) {
+            return;
+        }
+
+        qrImage.src = data.qrCode;
+        qrImage.hidden = false;
 
         document.getElementById("status").innerText =
-            "QR Active • Scan Now";
+            "QR Active - Scan Now";
 
         startTimer(data.expiresAt);
 
     } catch (error) {
-
-        console.error(error);
-
-        document.getElementById("status").innerText =
-            error.message;
-
+        if (thisGeneration === generationId) {
+            console.error("QR generation failed:", error);
+            document.getElementById("status").innerText = error.message;
+            document.getElementById("timer").innerText =
+                "Use Generate QR to try again.";
+        }
     }
 }
 
@@ -298,7 +437,7 @@ function startTimer(expiresAt) {
             document.getElementById("status").innerText =
                 "Refreshing secure QR...";
 
-            generateQR(currentStudentId, currentEventId);
+            generateQR(currentStudentId, currentEventId, false);
         }
 
     }, 1000);

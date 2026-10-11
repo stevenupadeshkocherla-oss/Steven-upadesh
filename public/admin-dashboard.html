@@ -18,6 +18,8 @@
         }
 
         body {
+            min-height: 100vh;
+            min-height: 100dvh;
             background: #f5f7fa;
             color: #172033;
         }
@@ -80,6 +82,18 @@
 
         .welcome p {
             color: #6b7280;
+        }
+
+        .roster-link {
+            display: inline-block;
+            margin-top: 14px;
+            color: #174ea6;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .roster-link:hover {
+            text-decoration: underline;
         }
 
         /* STAT CARDS */
@@ -287,15 +301,56 @@
         @media (max-width: 550px) {
 
             .navbar {
-                padding: 0 15px;
+                height: auto;
+                min-height: 64px;
+                padding: 10px 15px;
+                gap: 10px;
             }
 
             .brand h2 {
                 font-size: 14px;
             }
 
+            .admin-badge {
+                padding: 7px 10px;
+                font-size: 11px;
+                white-space: nowrap;
+            }
+
             .container {
-                padding: 25px 15px;
+                padding: 20px 12px max(20px, env(safe-area-inset-bottom));
+            }
+
+            .welcome h1 {
+                font-size: 24px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .stat-card {
+                padding: 12px 9px;
+            }
+
+            .stat-card span {
+                font-size: 12px;
+            }
+
+            .stat-card h2 {
+                font-size: 24px;
+            }
+
+            .card {
+                min-width: 0;
+                padding: 18px;
+            }
+
+            #reader video {
+                max-height: 45vh;
+                max-height: 45dvh;
+                object-fit: cover;
             }
 
         }
@@ -339,6 +394,10 @@
             <p>
                 Secure event check-in and real-time attendance management
             </p>
+
+            <a class="roster-link" href="/generate-qr.html">
+                Sync Google Sheets and email dynamic QR links →
+            </a>
 
         </div>
 
@@ -704,7 +763,7 @@
             } catch (error) {
                 startScannerButton.disabled = false;
                 showScanResult("scan-error", "Scanner could not start", error.message);
-                console.error("QR scanner start failed:", error);
+                console.error("QR scanner failed:", error);
             }
         });
 
